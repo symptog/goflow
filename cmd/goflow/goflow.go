@@ -7,6 +7,7 @@ import (
 	"os"
 	"runtime"
 	"sync"
+	"strings"
 
 	"github.com/cloudflare/goflow/v3/transport"
 	"github.com/cloudflare/goflow/v3/utils"
@@ -41,6 +42,10 @@ var (
 	EnableKafka = flag.Bool("kafka", true, "Enable Kafka")
 	MetricsAddr = flag.String("metrics.addr", ":8080", "Metrics address")
 	MetricsPath = flag.String("metrics.path", "/metrics", "Metrics path")
+
+	MetricFlowStats = flag.Bool("metrics.flow.stat", false, "Enable flow statistics")
+	MetricFlowAggreateProtos = flag.String("metrics.flow.aggregate.proto", "", "Comma separated list of IP type numbers to aggregate on")
+	MetricFlowAggreatePorts = flag.String("metrics.flow.aggregate.ports", "", "Comma separated list of port numbers to aggregate on")
 
 	TemplatePath = flag.String("templates.path", "/templates", "NetFlow/IPFIX templates list")
 
@@ -81,6 +86,10 @@ func main() {
 
 	log.Info("Starting GoFlow")
 
+	var metricFlowStats = *MetricFlowStats
+	var metricFlowAggreateProtos = strings.Split(*MetricFlowAggreateProtos, ",")
+	var metricFlowAggreatePorts = strings.Split(*MetricFlowAggreatePorts, ",")
+
 	sSFlow := &utils.StateSFlow{
 		Transport: defaultTransport,
 		Logger:    log.StandardLogger(),
@@ -88,6 +97,9 @@ func main() {
 	sNF := &utils.StateNetFlow{
 		Transport: defaultTransport,
 		Logger:    log.StandardLogger(),
+		MetricFlowStats: metricFlowStats,
+		MetricFlowAggreateProtos: metricFlowAggreateProtos,
+		MetricFlowAggreatePorts: metricFlowAggreatePorts,
 	}
 	sNFL := &utils.StateNFLegacy{
 		Transport: defaultTransport,

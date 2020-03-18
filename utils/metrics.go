@@ -8,6 +8,28 @@ import (
 )
 
 var (
+	MetricFlowStatsBytes = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "flow_stats_bytes",
+			Help: "Flow Stats Bytes received.",
+		},
+		[]string{"ip_version", "protocol", "port"},
+	)
+	MetricFlowStatsPackets = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "flow_stats_packets",
+			Help: "Flow Stats Packets received.",
+		},
+		[]string{"ip_version", "protocol", "port"},
+	)
+	MetricFlowStatsFlows = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "flow_stats_flows",
+			Help: "Flow Stats Flows received.",
+		},
+		[]string{"ip_version", "protocol", "port"},
+	)
+
 	MetricTrafficBytes = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "flow_traffic_bytes",
@@ -134,6 +156,10 @@ var (
 )
 
 func init() {
+	prometheus.MustRegister(MetricFlowStatsBytes)
+	prometheus.MustRegister(MetricFlowStatsPackets)
+	prometheus.MustRegister(MetricFlowStatsFlows)
+
 	prometheus.MustRegister(MetricTrafficBytes)
 	prometheus.MustRegister(MetricTrafficPackets)
 	prometheus.MustRegister(MetricPacketSizeSum)

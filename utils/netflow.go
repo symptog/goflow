@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"sync"
 	"time"
+	"net"
+	"fmt"
 
 	"github.com/cloudflare/goflow/v3/decoders/netflow"
 	flowmessage "github.com/cloudflare/goflow/v3/pb"
@@ -51,6 +53,11 @@ func (s *TemplateSystem) GetTemplate(version uint16, obsDomainId uint32, templat
 type StateNetFlow struct {
 	Transport     Transport
 	Logger        Logger
+
+	MetricFlowStats				bool
+	MetricFlowAggreateProtos 	[]string
+	MetricFlowAggreatePorts		[]string
+
 	templateslock *sync.RWMutex
 	templates     map[string]*TemplateSystem
 
@@ -313,6 +320,54 @@ func (s *StateNetFlow) DecodeFlow(msg interface{}) error {
 					"version": "10",
 				}).
 				Observe(float64(timeDiff))
+		}
+	}
+
+	if s.MetricFlowStats {
+		for _, fmsg := range flowMessageSet {
+			var ip_version = "6"
+			if (net.IP(fmsg.SrcAddr).To4() != nil) {
+				ip_version = "4"
+			}
+			var protocol = "undefined"
+			for _, b := range s.MetricFlowAggreateProtos {
+				if (b == fmt.Sprint(fmsg.Proto)) {
+					protocol = fmt.Sprint(fmsg.Proto)
+				}
+			}
+			var port = "undefined"
+			for _, b := range s.MetricFlowAggreatePorts {
+				if (b == fmt.Sprint(fmsg.SrcPort)) {
+					port = fmt.Sprint(fmsg.SrcPort)
+				} else if (b == fmt.Sprint(fmsg.DstPort)) {
+					port = fmt.Sprint(fmsg.DstPort)
+				}
+			}
+
+			MetricFlowStatsBytes.With(
+				prometheus.Labels{
+					"ip_version":  ip_version,
+					"protocol": protocol,
+					"port": port,
+				}).
+				Add(float64(fmsg.Bytes))
+
+			MetricFlowStatsPackets.With(
+				prometheus.Labels{
+					"ip_version":  ip_version,
+					"protocol": protocol,
+					"port": port,
+				}).
+				Add(float64(fmsg.Packets))
+
+			MetricFlowStatsFlows.With(
+				prometheus.Labels{
+					"ip_version":  ip_version,
+					"protocol": protocol,
+					"port": port,
+				}).
+				Inc()
+			
 		}
 	}
 
