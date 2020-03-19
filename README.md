@@ -70,6 +70,77 @@ Monitoring:
 * Payload information
 * NetFlow Templates
 
+### Flow Traffic Stats
+
+goflow collects traffic metrics and privides them via its prometheus exporter.
+
+To collect flow stats you need to add some flags to the cli tool.
+
+This enhancement collects bytes, packets and flows from the incomming flows.
+The metrics are sorted according to the following criteria:
+
+* IPv4 or IPv6
+* [IP Protocol Type](https://en.wikipedia.org/wiki/List_of_IP_protocol_numbers)
+* Source or Destination Port
+
+Flags:
+
+* `-metrics.flow.stat=true` enables the flow analysis
+* `-metrics.flow.aggregate.ports="22,80,443"` the metrics will be sorted by either port `22`, `80`, `443` or `unknown`
+* `-metrics.flow.aggregate.proto="1,6,17,58"` the metrics will be sorted by either protocol type `1`, `6`, `17`, `58` or `unknown`
+
+Be careful while definind protocol types and ports. You will potentially end up with `3 * 2 * ports * protocols` metrics.
+
+The result will look like this:
+
+```
+# HELP flow_stats_bytes Flow Stats Bytes received.
+# TYPE flow_stats_bytes counter
+flow_stats_bytes{ip_version="4",port="22",protocol="6"} 58489
+flow_stats_bytes{ip_version="4",port="443",protocol="6"} 4.400411e+06
+flow_stats_bytes{ip_version="4",port="80",protocol="6"} 2020
+flow_stats_bytes{ip_version="4",port="undefined",protocol="1"} 9517
+flow_stats_bytes{ip_version="4",port="undefined",protocol="17"} 9.16757934e+08
+flow_stats_bytes{ip_version="4",port="undefined",protocol="6"} 1296
+flow_stats_bytes{ip_version="6",port="22",protocol="6"} 4767
+flow_stats_bytes{ip_version="6",port="443",protocol="17"} 349449
+flow_stats_bytes{ip_version="6",port="443",protocol="6"} 3.405912e+06
+flow_stats_bytes{ip_version="6",port="80",protocol="6"} 2688
+flow_stats_bytes{ip_version="6",port="undefined",protocol="17"} 35226
+flow_stats_bytes{ip_version="6",port="undefined",protocol="58"} 1112
+flow_stats_bytes{ip_version="6",port="undefined",protocol="6"} 7260
+# HELP flow_stats_flows Flow Stats Flows received.
+# TYPE flow_stats_flows counter
+flow_stats_flows{ip_version="4",port="22",protocol="6"} 16
+flow_stats_flows{ip_version="4",port="443",protocol="6"} 390
+flow_stats_flows{ip_version="4",port="80",protocol="6"} 12
+flow_stats_flows{ip_version="4",port="undefined",protocol="1"} 9
+flow_stats_flows{ip_version="4",port="undefined",protocol="17"} 622
+flow_stats_flows{ip_version="4",port="undefined",protocol="6"} 12
+flow_stats_flows{ip_version="6",port="22",protocol="6"} 14
+flow_stats_flows{ip_version="6",port="443",protocol="17"} 62
+flow_stats_flows{ip_version="6",port="443",protocol="6"} 598
+flow_stats_flows{ip_version="6",port="80",protocol="6"} 12
+flow_stats_flows{ip_version="6",port="undefined",protocol="17"} 173
+flow_stats_flows{ip_version="6",port="undefined",protocol="58"} 9
+flow_stats_flows{ip_version="6",port="undefined",protocol="6"} 14
+# HELP flow_stats_packets Flow Stats Packets received.
+# TYPE flow_stats_packets counter
+flow_stats_packets{ip_version="4",port="22",protocol="6"} 313
+flow_stats_packets{ip_version="4",port="443",protocol="6"} 6635
+flow_stats_packets{ip_version="4",port="80",protocol="6"} 37
+flow_stats_packets{ip_version="4",port="undefined",protocol="1"} 138
+flow_stats_packets{ip_version="4",port="undefined",protocol="17"} 929711
+flow_stats_packets{ip_version="4",port="undefined",protocol="6"} 24
+flow_stats_packets{ip_version="6",port="22",protocol="6"} 63
+flow_stats_packets{ip_version="6",port="443",protocol="17"} 607
+flow_stats_packets{ip_version="6",port="443",protocol="6"} 7677
+flow_stats_packets{ip_version="6",port="80",protocol="6"} 36
+flow_stats_packets{ip_version="6",port="undefined",protocol="17"} 187
+flow_stats_packets{ip_version="6",port="undefined",protocol="58"} 13
+flow_stats_packets{ip_version="6",port="undefined",protocol="6"} 99
+```
+
 ## Run
 
 Download the latest release and just run the following command:
