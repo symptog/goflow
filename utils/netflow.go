@@ -50,6 +50,7 @@ func (s *TemplateSystem) GetTemplate(version uint16, obsDomainId uint32, templat
 	return s.templates.GetTemplate(version, obsDomainId, templateId)
 }
 
+
 type StateNetFlow struct {
 	Transport     Transport
 	Logger        Logger
@@ -63,6 +64,53 @@ type StateNetFlow struct {
 
 	samplinglock *sync.RWMutex
 	sampling     map[string]producer.SamplingRateSystem
+}
+
+func (s *StateNetFlow) FlowTrafficMetrics(fmsg *flowmessage.FlowMessage) {
+	if s.MetricFlowStats {
+		var ip_version = "6"
+		if (net.IP(fmsg.SrcAddr).To4() != nil) {
+			ip_version = "4"
+		}
+		var protocol = "undefined"
+		for _, b := range s.MetricFlowAggreateProtos {
+			if (b == fmt.Sprint(fmsg.Proto)) {
+				protocol = fmt.Sprint(fmsg.Proto)
+			}
+		}
+		var port = "undefined"
+		for _, b := range s.MetricFlowAggreatePorts {
+			if (b == fmt.Sprint(fmsg.SrcPort)) {
+				port = fmt.Sprint(fmsg.SrcPort)
+			} else if (b == fmt.Sprint(fmsg.DstPort)) {
+				port = fmt.Sprint(fmsg.DstPort)
+			}
+		}
+
+		MetricFlowStatsBytes.With(
+			prometheus.Labels{
+				"ip_version":  ip_version,
+				"protocol": protocol,
+				"port": port,
+			}).
+			Add(float64(fmsg.Bytes))
+
+		MetricFlowStatsPackets.With(
+			prometheus.Labels{
+				"ip_version":  ip_version,
+				"protocol": protocol,
+				"port": port,
+			}).
+			Add(float64(fmsg.Packets))
+
+		MetricFlowStatsFlows.With(
+			prometheus.Labels{
+				"ip_version":  ip_version,
+				"protocol": protocol,
+				"port": port,
+			}).
+			Inc()
+	}
 }
 
 func (s *StateNetFlow) DecodeFlow(msg interface{}) error {
@@ -227,6 +275,7 @@ func (s *StateNetFlow) DecodeFlow(msg interface{}) error {
 					"version": "9",
 				}).
 				Observe(float64(timeDiff))
+			s.FlowTrafficMetrics(fmsg)
 		}
 	case netflow.IPFIXPacket:
 		NetFlowStats.With(
@@ -320,54 +369,7 @@ func (s *StateNetFlow) DecodeFlow(msg interface{}) error {
 					"version": "10",
 				}).
 				Observe(float64(timeDiff))
-		}
-	}
-
-	if s.MetricFlowStats {
-		for _, fmsg := range flowMessageSet {
-			var ip_version = "6"
-			if (net.IP(fmsg.SrcAddr).To4() != nil) {
-				ip_version = "4"
-			}
-			var protocol = "undefined"
-			for _, b := range s.MetricFlowAggreateProtos {
-				if (b == fmt.Sprint(fmsg.Proto)) {
-					protocol = fmt.Sprint(fmsg.Proto)
-				}
-			}
-			var port = "undefined"
-			for _, b := range s.MetricFlowAggreatePorts {
-				if (b == fmt.Sprint(fmsg.SrcPort)) {
-					port = fmt.Sprint(fmsg.SrcPort)
-				} else if (b == fmt.Sprint(fmsg.DstPort)) {
-					port = fmt.Sprint(fmsg.DstPort)
-				}
-			}
-
-			MetricFlowStatsBytes.With(
-				prometheus.Labels{
-					"ip_version":  ip_version,
-					"protocol": protocol,
-					"port": port,
-				}).
-				Add(float64(fmsg.Bytes))
-
-			MetricFlowStatsPackets.With(
-				prometheus.Labels{
-					"ip_version":  ip_version,
-					"protocol": protocol,
-					"port": port,
-				}).
-				Add(float64(fmsg.Packets))
-
-			MetricFlowStatsFlows.With(
-				prometheus.Labels{
-					"ip_version":  ip_version,
-					"protocol": protocol,
-					"port": port,
-				}).
-				Inc()
-			
+			s.FlowTrafficMetrics(fmsg)
 		}
 	}
 

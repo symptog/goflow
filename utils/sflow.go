@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"net"
 	"time"
+	"fmt"
 
 	"github.com/cloudflare/goflow/v3/decoders/sflow"
 	flowmessage "github.com/cloudflare/goflow/v3/pb"
@@ -15,7 +16,58 @@ type StateSFlow struct {
 	Transport Transport
 	Logger    Logger
 
+	MetricFlowStats				bool
+	MetricFlowAggreateProtos 	[]string
+	MetricFlowAggreatePorts		[]string
+
 	Config *producer.SFlowProducerConfig
+}
+
+func (s *StateSFlow) FlowTrafficMetrics(fmsg *flowmessage.FlowMessage) {
+	if s.MetricFlowStats {
+		var ip_version = "6"
+		if (net.IP(fmsg.SrcAddr).To4() != nil) {
+			ip_version = "4"
+		}
+		var protocol = "undefined"
+		for _, b := range s.MetricFlowAggreateProtos {
+			if (b == fmt.Sprint(fmsg.Proto)) {
+				protocol = fmt.Sprint(fmsg.Proto)
+			}
+		}
+		var port = "undefined"
+		for _, b := range s.MetricFlowAggreatePorts {
+			if (b == fmt.Sprint(fmsg.SrcPort)) {
+				port = fmt.Sprint(fmsg.SrcPort)
+			} else if (b == fmt.Sprint(fmsg.DstPort)) {
+				port = fmt.Sprint(fmsg.DstPort)
+			}
+		}
+
+		MetricFlowStatsBytes.With(
+			prometheus.Labels{
+				"ip_version":  ip_version,
+				"protocol": protocol,
+				"port": port,
+			}).
+			Add(float64(fmsg.Bytes))
+
+		MetricFlowStatsPackets.With(
+			prometheus.Labels{
+				"ip_version":  ip_version,
+				"protocol": protocol,
+				"port": port,
+			}).
+			Add(float64(fmsg.Packets))
+
+		MetricFlowStatsFlows.With(
+			prometheus.Labels{
+				"ip_version":  ip_version,
+				"protocol": protocol,
+				"port": port,
+			}).
+			Inc()
+	}
 }
 
 func (s *StateSFlow) DecodeFlow(msg interface{}) error {
@@ -128,6 +180,7 @@ func (s *StateSFlow) DecodeFlow(msg interface{}) error {
 		fmsg.TimeReceived = ts
 		fmsg.TimeFlowStart = ts
 		fmsg.TimeFlowEnd = ts
+		s.FlowTrafficMetrics(fmsg)
 	}
 
 	if s.Transport != nil {

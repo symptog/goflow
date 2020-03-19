@@ -93,6 +93,9 @@ func main() {
 	sSFlow := &utils.StateSFlow{
 		Transport: defaultTransport,
 		Logger:    log.StandardLogger(),
+		MetricFlowStats: metricFlowStats,
+		MetricFlowAggreateProtos: metricFlowAggreateProtos,
+		MetricFlowAggreatePorts: metricFlowAggreatePorts,
 	}
 	sNF := &utils.StateNetFlow{
 		Transport: defaultTransport,
@@ -104,6 +107,9 @@ func main() {
 	sNFL := &utils.StateNFLegacy{
 		Transport: defaultTransport,
 		Logger:    log.StandardLogger(),
+		MetricFlowStats: metricFlowStats,
+		MetricFlowAggreateProtos: metricFlowAggreateProtos,
+		MetricFlowAggreatePorts: metricFlowAggreatePorts,
 	}
 
 	go httpServer(sNF)
